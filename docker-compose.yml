@@ -6,3 +6,12 @@ services:
       - "5901:5901" # VNC direct connection
     volumes:
       - ./logs:/var/log/supervisor
+    restart: "unless-stopped"
+  redroid:
+    image: redroid/redroid:12.0.0_64only-latest
+    privileged: true
+    ports:
+      - "5555:5555"
+    volumes:
+      - ~/data11:/data
+    restart: "unless-stopped" # 对应 --rm，容器停止时不保留

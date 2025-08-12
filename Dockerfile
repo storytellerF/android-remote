@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y \
     libvirt-daemon-system \
     libvirt-clients \
     bridge-utils \
+    scrcpy \
     && apt-get purge -y xfce4-power-manager xfce4-power-manager-data \
     && rm -rf /var/lib/apt/lists/*
 
@@ -42,6 +43,7 @@ RUN echo "#!/bin/bash" > /root/.vnc/xstartup && \
 
 # Copy supervisor configuration
 COPY supervisord.conf /etc/supervisor/supervisord.conf
+COPY start.sh /root/start.sh
 
 # Expose Ports:
 # 6080: noVNC Web Interface
