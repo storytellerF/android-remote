@@ -1,15 +1,13 @@
 # Base Image
 FROM ubuntu:22.04
 
+ARG OPENJDK_VERSION
 # Avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Set VNC password, which can be overridden at build time
-ARG VNC_PASSWD=password
-ENV VNC_PASSWD=${VNC_PASSWD}
-
-# 1. Install Dependencies: VNC, Desktop, Supervisor, Java, KVM, and other tools
+# Install Dependencies: VNC, Desktop, Supervisor, Java, KVM, and other tools
 RUN apt-get update && apt-get install -y \
+    dbus-x11 \
     supervisor \
     tightvncserver \
     xfce4 \
@@ -17,23 +15,33 @@ RUN apt-get update && apt-get install -y \
     novnc \
     websockify \
     net-tools \
-    openjdk-17-jdk \
+    openjdk-${OPENJDK_VERSION}-jdk \
     wget \
     unzip \
     qemu-kvm \
     libvirt-daemon-system \
     libvirt-clients \
     bridge-utils \
+    w3m \
+    locales \
+    fonts-wqy-microhei \
+    fonts-wqy-zenhei \
     scrcpy \
+    dos2unix \
     && apt-get purge -y xfce4-power-manager xfce4-power-manager-data \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Setup VNC, Supervisor & KVM
+# Setup VNC, Supervisor & KVM
 RUN mkdir -p /var/log/supervisor && \
     mkdir -p /root/.vnc && \
-    echo "${VNC_PASSWD}" | vncpasswd -f > /root/.vnc/passwd && \
-    chmod 600 /root/.vnc/passwd && \
     adduser root kvm
+
+# Copy startup scripts
+COPY start-android.sh /usr/local/bin/start-android.sh
+RUN chmod +x /usr/local/bin/start-android.sh
+COPY start-vnc.sh /usr/local/bin/start-vnc.sh
+RUN chmod +x /usr/local/bin/start-vnc.sh
+RUN dos2unix /usr/local/bin/*.sh
 
 # Setup the startup script for the VNC server to launch the XFCE desktop
 RUN echo "#!/bin/bash" > /root/.vnc/xstartup && \
@@ -43,7 +51,19 @@ RUN echo "#!/bin/bash" > /root/.vnc/xstartup && \
 
 # Copy supervisor configuration
 COPY supervisord.conf /etc/supervisor/supervisord.conf
-COPY start.sh /root/start.sh
+
+# 配置 locale 为中文 UTF-8
+RUN locale-gen zh_CN.UTF-8 && \
+    update-locale LANG=zh_CN.UTF-8
+
+ENV LANG=zh_CN.UTF-8
+ENV LANGUAGE=zh_CN:zh
+ENV LC_ALL=zh_CN.UTF-8
+
+# 配置 w3m 默认使用 UTF-8
+RUN mkdir -p /root/.w3m && \
+    echo "charset UTF-8" >> /root/.w3m/config && \
+    echo "display_charset UTF-8" >> /root/.w3m/config
 
 # Expose Ports:
 # 6080: noVNC Web Interface
